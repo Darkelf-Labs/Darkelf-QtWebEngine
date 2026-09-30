@@ -1,0 +1,54 @@
+--- a/src/3rdparty/chromium/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
++++ b/src/3rdparty/chromium/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
+@@ -190,6 +190,24 @@
+ 
+ namespace {
+ 
++uint32_t DarkelfWebGLDomainHash(const String& hostname) {
++  uint32_t hash = 2166136261u;
++
++  if (hostname.Is8Bit()) {
++    for (LChar ch : hostname.Span8()) {
++      hash ^= static_cast<uint32_t>(ch);
++      hash *= 16777619u;
++    }
++  } else {
++    for (UChar ch : hostname.Span16()) {
++      hash ^= static_cast<uint32_t>(ch);
++      hash *= 16777619u;
++    }
++  }
++
++  return hash;
++}
++
+ enum class WebGLANGLEImplementation {
+   // These values are persisted to logs. Entries should not be renumbered and
+   // numeric values should never be reused.
+@@ -4113,8 +4131,14 @@
+               pname, IdentifiabilityBenignStringToken(
+                          String(ContextGL()->GetString(GL_RENDERER))));
+         }
+-        return WebGLAny(script_state,
+-                        String(ContextGL()->GetString(GL_RENDERER)));
++        const String hostname =
++            Host()->GetExecutionContextUrl().Host().ToString();
++        const uint32_t darkelf_hash = DarkelfWebGLDomainHash(hostname);
++        const char* darkelf_renderer =
++            (darkelf_hash % 2u == 0u)
++                ? "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)"
++                : "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)";
++        return WebGLAny(script_state, String(darkelf_renderer));
+       }
+       SynthesizeGLError(
+           GL_INVALID_ENUM, "getParameter",
+@@ -4128,8 +4152,7 @@
+               pname, IdentifiabilityBenignStringToken(
+                          String(ContextGL()->GetString(GL_VENDOR))));
+         }
+-        return WebGLAny(script_state,
+-                        String(ContextGL()->GetString(GL_VENDOR)));
++        return WebGLAny(script_state, String("Google Inc. (Apple)"));
+       }
+       SynthesizeGLError(
+           GL_INVALID_ENUM, "getParameter",
