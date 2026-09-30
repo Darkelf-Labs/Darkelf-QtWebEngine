@@ -1,0 +1,18 @@
+--- a/src/3rdparty/chromium/content/browser/webauth/authenticator_common_impl.cc
++++ b/src/3rdparty/chromium/content/browser/webauth/authenticator_common_impl.cc
+@@ -329,6 +329,15 @@
+   discovery_factory->set_mac_touch_id_info(
+       GetWebAuthenticationDelegate()->GetTouchIdAuthenticatorConfig(
+           render_frame_host->GetBrowserContext()));
++
++  // Darkelf: provide the native Cocoa window so Chromium can instantiate
++  // the iCloud Keychain WebAuthn authenticator.
++  auto native_window =
++      static_cast<RenderFrameHostImpl*>(render_frame_host)
++          ->GetTopLevelNativeWindow();
++  if (native_window) {
++    discovery_factory->set_nswindow(native_window);
++  }
+ #endif  // BUILDFLAG(IS_MAC)
+
+ #if BUILDFLAG(IS_CHROMEOS)
