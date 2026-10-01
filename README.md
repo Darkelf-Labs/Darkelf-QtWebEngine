@@ -57,7 +57,7 @@ A `true` capability result by itself should not be treated as sufficient verific
 
 ## Darkelf Shadow Integration
 
-This QtWebEngine build is used by the native macOS ARM64 distribution of **Darkelf Shadow 7.0.9**.
+This QtWebEngine build is used by the native macOS ARM64 distribution of **Darkelf Shadow 7.0.12**.
 
 The custom engine provides:
 
