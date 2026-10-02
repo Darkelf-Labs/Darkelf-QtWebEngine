@@ -79,6 +79,6 @@ H.264/AVC patent licensing and other patent considerations are separate from the
 
 ## Status
 
-This patch is part of the **Darkelf Shadow 7.0.9 macOS ARM64 engine configuration**.
+This patch is part of the **Darkelf Shadow 7.0.12 macOS ARM64 engine configuration**.
 
 The custom QtWebEngine framework has been integrated into the Darkelf Shadow native macOS application and used with its signed and notarized distribution.
