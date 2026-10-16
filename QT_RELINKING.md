@@ -1,46 +1,39 @@
-# Replacing LGPL Qt Libraries in Darkelf Shadow (macOS)
+# Replacing LGPL Qt Libraries in Darkelf Shadow 7.0.30 (macOS)
 
-Darkelf Shadow's native macOS application uses dynamically linked Qt frameworks. This document explains a possible **developer-controlled replacement workflow** for LGPL-covered Qt libraries. It does not claim that a replacement build has been successfully tested, or that every component of the application is covered by LGPL.
+Darkelf Shadow 7.0.30 uses dynamically linked **Qt / PySide6 6.12.0** and custom **QtWebEngine 6.12.0** on macOS ARM64. This describes a possible developer-controlled replacement workflow, not a completed compatibility test.
 
-## Obtain corresponding source
+## Source and build
 
-Follow [QT_SOURCE.md](QT_SOURCE.md) to obtain the QtWebEngine 6.11.2 source, the exact Darkelf patches, and other corresponding source/build materials for the specific binary release. See [BUILDING.md](BUILDING.md) for the repository's configure/build steps.
+Obtain the corresponding Qt 6.12.0 source and verified Darkelf patches described in [QT_SOURCE.md](QT_SOURCE.md). Build replacement QtWebEngine 6.12.0 libraries using matching Qt, ABI, architecture, deployment target, and build settings. Do not mix QtWebEngine 6.11.x and Qt 6.12.0 components.
 
-## Replacement workflow (on a copy)
+## Replacement procedure
 
-1. **Do not modify the installed, signed release.** Make a separate working copy of the application and retain the original DMG.
-2. Build compatible replacement Qt libraries from the corresponding source. Preserve architecture, ABI, framework identifiers, install names and the Qt/PySide6 version compatibility expected by the app.
-3. Replace only the relevant libraries in the **working copy**. Check associated frameworks, helpers, resources and load paths; QtWebEngine may depend on matching components.
-4. Because replacing framework contents invalidates the existing app's code signature, sign the modified nested components and then the outer app with a **local development or ad-hoc signature**, as appropriate for local testing. The original Developer ID signature and Apple's notarization cannot be preserved after modification.
-5. Verify the modified copy and test launch, page loading, WebGL, media and any WebAuthn functionality that remains available with the chosen signing identity and entitlements.
+1. Keep the original signed DMG intact and create a separate working copy of `Darkelf Shadow.app`.
+2. Identify the actual embedded Qt frameworks, helpers, and resources; Nuitka bundle paths may differ.
+3. Replace the matching Qt libraries in the working copy, preserving versioned framework layout, symlinks, install names, helper binaries, resources, and dependency compatibility.
+4. Inspect `otool -L` dependencies and runtime paths. Repair broken links only in the working copy.
+5. Re-sign modified nested frameworks and helper applications before signing the outer app using an appropriate local signing identity and entitlements. The original Developer ID signature and notarization will no longer be valid.
+6. Verify the modified app launches and test page loading, WebGL, H.264 playback, and WebAuthn registration and authentication.
 
-A locally modified app may not be eligible for the original vendor's Keychain access group or associated Apple entitlements. Passkey/Touch ID features may therefore behave differently after local re-signing; this is not evidence that the LGPL library replacement itself failed.
-
-## Useful inspection commands
+## Read-only checks
 
 ```sh
 APP="/path/to/working-copy/Darkelf Shadow.app"
+find "$APP/Contents" \( -name 'QtWebEngineCore.framework' -o -name 'QtWebEngineProcess.app' \) -print
+# Replace this example with the actual path found above:
 FW="$APP/Contents/Frameworks/PySide6/Qt/lib/QtWebEngineCore.framework"
-
 file "$FW/Versions/A/QtWebEngineCore"
 otool -L "$FW/Versions/A/QtWebEngineCore"
 codesign --verify --strict --verbose=2 "$FW"
 codesign --verify --strict --verbose=2 "$APP"
 ```
 
-These commands are read-only. They do not replace or re-sign any binary.
+## Touch ID caveat
 
-## macOS signing and LGPL considerations
+The custom WebAuthn integration uses the Keychain access group `C7352X2Z2S.com.darkelfbrowser.shadow`. Independently re-signed copies may lack authorization to use this group. Use an authorized group and corresponding entitlements where necessary. A failed Touch ID test alone does not prove library replacement failed.
 
-The official Darkelf release may be Developer ID signed and notarized. Those mechanisms establish the identity/integrity of the **original release**, not a guarantee that a user-modified copy will retain the original signature or Apple-granted entitlements. Local replacement and re-signing must not be prohibited by the distribution's terms or technical controls where the applicable LGPL requires the ability to modify/relink the covered library.
+## Licensing and limitations
 
-**Not yet verified:** a complete, documented replacement-and-launch test against the distributed Darkelf Shadow v7.0.29 app. Until that test is performed, this document is guidance rather than proof of practical replaceability.
+Qt, Chromium, FFmpeg, and other bundled components may have different license conditions. Follow their applicable license texts and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). A source URL alone does not establish exact corresponding source for the shipped binary.
 
-## Limitations
-
-- QtWebEngine, Qt modules, Chromium, FFmpeg and other bundled code can carry **different licenses and conditions**.
-- An upstream source URL by itself may not provide the exact corresponding modified source for a shipped build.
-- A locally modified copy may require additional macOS security approvals or a suitable signing identity.
-- Consult the actual LGPL/GPL texts and the distribution's third-party notices for the governing requirements.
-
-For issues with the documented source or replacement procedure, open an issue at <https://github.com/Darkelf-Labs/Darkelf-QtWebEngine/issues>.
+**Not yet verified:** End-to-end library replacement and launch against the released Darkelf Shadow 7.0.30 app.
