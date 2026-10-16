@@ -1,84 +1,146 @@
-# Darkelf QtWebEngine 6.11.2 macOS WebAuthn Patch Kit
+# Darkelf QtWebEngine 6.12.0 — macOS WebAuthn Patch Kit
 
-This kit patches QtWebEngine 6.11.2's `WebAuthenticationDelegateQt` to provide Chromium's macOS Touch ID authenticator configuration for Darkelf Shadow.
+Custom **QtWebEngine 6.12.0 ARM64** integration for **Darkelf Shadow 7.0.30**, providing native macOS Touch ID, WebAuthn/passkey support, and enhanced Chromium engine capabilities.
+
+## What's New in Darkelf Shadow 7.0.30
+
+- **QtWebEngine 6.12.0** — Upgraded custom Chromium-based engine.
+- **Qt / PySide6 6.12.0** — Updated native GUI framework.
+- **Python 3.14.8** — Upgraded application runtime.
+- **Nuitka 4.1.3** — Native macOS application compilation.
+- **Apple Silicon ARM64** — Native macOS distribution.
+- **Improved startup** — Fixed the black-screen delay between splash screen and homepage.
+- **Touch ID / WebAuthn** — Preserved native macOS passkey integration.
+- **Native WebGL** — Maintained custom WebGL integration.
+- **Developer ID signing and notarization** — Maintained the macOS distribution workflow.
 
 ## Why
 
-Qt's delegate currently overrides `SupportsResidentKeys()` but not `GetTouchIdAuthenticatorConfig()`. Chromium's default implementation returns `std::nullopt`, so `isUserVerifyingPlatformAuthenticatorAvailable()` reports false even though the WebAuthn API itself exists.
+Darkelf's custom QtWebEngine integration addresses Chromium platform-authenticator configuration within Qt's `WebAuthenticationDelegateQt`.
+
+Without the appropriate Touch ID authenticator configuration, Chromium's default `GetTouchIdAuthenticatorConfig()` implementation can return `std::nullopt`, causing:
+
+`PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`
+
+to report `false`, even when the WebAuthn API exists.
+
+The Darkelf patch provides the configuration required for macOS Touch ID and platform passkey integration.
 
 ## Design
 
-- Keychain access group: `C7352X2Z2S.com.darkelfbrowser.shadow`
-- A random 32-byte metadata secret is generated once per persistent Qt profile and stored as 64 hex characters in `.darkelf-webauthn-secret` inside the profile data directory.
+- **Keychain access group:** `C7352X2Z2S.com.darkelfbrowser.shadow`
+- A random 32-byte metadata secret is generated once per persistent Qt profile.
+- The secret is stored as 64 hexadecimal characters in `.darkelf-webauthn-secret` within the profile data directory.
 - File permissions are restricted to the owner.
-- Off-the-record profiles deliberately return `nullopt` so they do not create persistent Touch ID credentials.
-- The application must be signed with the matching `keychain-access-groups` entitlement.
+- Off-the-record profiles return `nullopt` to avoid creating persistent Touch ID credentials.
+- The application requires matching `keychain-access-groups` signing entitlements.
 
 ## Apply
 
-Extract the official `qtwebengine-everywhere-src-6.11.2` source tree, then run:
+Obtain the official **QtWebEngine 6.12.0** source tree:
 
-    ./apply-patch.sh ~/Desktop/qtwebengine-everywhere-src-6.11.2
+`qtwebengine-everywhere-src-6.12.0`
 
-The script performs `patch --dry-run` before changing the source.
+For a patch series ported and validated against QtWebEngine 6.12.0, apply it using:
+
+```bash
+./apply-patch.sh "$HOME/Desktop/qtwebengine-everywhere-src-6.12.0"
+```
+
+The patch application script should perform a dry run before modifying source files.
+
+**Compatibility:** The checked-in patches must target QtWebEngine 6.12.0. Patches created for 6.11.2 should not be assumed compatible without verification.
 
 ## Build
 
-A matching complete Qt 6.11.2 development installation is required. Set `QT_PREFIX` if `qtpaths6` does not resolve the correct installation:
+A matching **Qt 6.12.0** development installation is required.
 
-    export QT_PREFIX=/path/to/Qt/6.11.2/macos
-    ./build-darkelf-qtwebengine.sh
+```bash
+export QT_PREFIX="/path/to/Qt/6.12.0/macos"
+./build-darkelf-qtwebengine.sh
+```
 
-The build enables Qt's existing `webengine-proprietary-codecs` option. Qt's CMake configuration passes Chromium `proprietary_codecs`, `rtc_use_h264`, and `ffmpeg_branding="Chrome"`.
+The custom build configuration includes:
 
-This is a build configuration change, not an FFmpeg source patch.
+- QtWebEngine proprietary codec support.
+- Chromium `proprietary_codecs` configuration.
+- H.264-related media capabilities.
+- FFmpeg Chrome branding configuration.
+- Native WebGL integration.
+
+These features depend on the actual compiled configuration of the 6.12.0 framework. Proprietary codec support does not automatically provide DRM/Widevine functionality.
 
 ## Signing
 
-Use `darkelf-webauthn.entitlements.plist` as the basis for the main Darkelf Shadow application entitlements.
+Use `darkelf-webauthn.entitlements.plist` as the reference for Darkelf Shadow's macOS signing configuration.
 
-The keychain access group must remain identical to the value defined in the C++ patch.
+The Keychain access group must match the value compiled into the C++ WebAuthn integration.
 
-Sign nested QtWebEngine frameworks and helper applications before signing the outer Darkelf Shadow application. Do not modify an already signed QtWebEngine framework.
+Sign nested QtWebEngine frameworks and helper applications before signing the main Darkelf Shadow application.
+
+The macOS release workflow includes:
+
+- Developer ID Application signing.
+- Hardened runtime.
+- WebAuthn/Touch ID entitlements.
+- Apple notarization.
+- Signed DMG distribution.
+
+Do not modify the framework after signing.
 
 ## Verification
 
-After building Darkelf Shadow with the custom QtWebEngine framework and signing it correctly, test:
+After building and signing Darkelf Shadow with the custom QtWebEngine 6.12.0 framework, test:
 
-    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+```javascript
+PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+  .then(console.log);
+```
 
-On a compatible Mac with Touch ID/Secure Enclave and correct signing, the expected result is:
+On a compatible Mac with correctly configured Touch ID, Secure Enclave, and signing entitlements, the expected result is:
 
-    true
+```text
+true
+```
 
-A real WebAuthn registration and authentication should also be performed. Darkelf Shadow has been tested with passkey registration and authentication using the custom QtWebEngine build.
-
-A `true` capability result by itself should not be treated as sufficient verification of the complete integration.
+Also verify actual passkey registration and authentication. A `true` capability result alone does not confirm that the complete integration works.
 
 ## Darkelf Shadow Integration
 
-This QtWebEngine build is used by the native macOS ARM64 distribution of **Darkelf Shadow 7.0.12**.
+The custom **QtWebEngine 6.12.0** framework is integrated into the native macOS ARM64 distribution of **Darkelf Shadow 7.0.30**.
 
-The custom engine provides:
+### Technology Stack
 
-- macOS Touch ID / platform WebAuthn integration
-- Passkey registration and authentication support
-- QtWebEngine 6.11.2 integration
-- Proprietary codec build configuration for expanded media compatibility
-- H.264-related Chromium media capability
+| Component | Version |
+|---|---|
+| Darkelf Shadow | 7.0.30 |
+| Python | 3.14.8 |
+| Nuitka | 4.1.3 |
+| Qt / PySide6 | 6.12.0 |
+| Custom QtWebEngine | 6.12.0 |
+| Architecture | macOS ARM64 |
 
-The standard cross-platform PyPI distribution of Darkelf Shadow uses the standard PySide6/QtWebEngine packages rather than this custom macOS framework.
+The standard cross-platform PyPI distribution uses stock PySide6/QtWebEngine packages rather than this custom macOS framework.
 
 ## Licensing
 
-Qt WebEngine, Chromium, FFmpeg, and their bundled components remain subject to their respective upstream licenses.
+Qt WebEngine, Chromium, FFmpeg, and their bundled components retain their respective upstream licenses.
 
-Darkelf's modifications do not change the licenses of those upstream projects.
+Darkelf's modifications do not change the licenses of upstream projects.
 
-H.264/AVC patent licensing and other patent considerations are separate from the open-source licenses governing Darkelf Shadow, Qt, Chromium, and FFmpeg.
+H.264/AVC patent licensing and other patent considerations remain separate from applicable open-source licenses.
+
+See the repository's `LICENSE.md`, `THIRD_PARTY_NOTICES.md`, `QT_SOURCE.md`, and `QT_RELINKING.md` for licensing and corresponding-source information.
 
 ## Status
 
-This patch is part of the **Darkelf Shadow 7.0.12 macOS ARM64 engine configuration**.
+**Current release: Darkelf Shadow 7.0.30**
 
-The custom QtWebEngine framework has been integrated into the Darkelf Shadow native macOS application and used with its signed and notarized distribution.
+- Python 3.14.8 runtime integration.
+- Qt / PySide6 6.12.0 upgrade.
+- Custom QtWebEngine 6.12.0 ARM64 integration.
+- Nuitka 4.1.3 compilation.
+- Improved splash-to-homepage startup transition.
+- Native macOS security and privacy architecture maintained.
+
+**Darkelf Shadow 7.0.30 — Modernized QtWebEngine. Native macOS integration. Privacy-focused browsing.**
